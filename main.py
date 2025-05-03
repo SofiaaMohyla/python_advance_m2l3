@@ -1,12 +1,17 @@
+import uvicorn
 from fastapi import FastAPI, Depends
 from sqlalchemy import Column, Integer, String, create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
+from starlette.requests import Request
+from starlette.responses import HTMLResponse
+from starlette.templating import Jinja2Templates
 
 DATABASE_URL = "sqlite:///./test.db"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False}, echo=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+templates = Jinja2Templates(directory="templates")
 
 # 🎯 Модель SQLAlchemy
 class User(Base):
@@ -47,3 +52,10 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 @app.get("/users/")
 def read_users(db: Session = Depends(get_db)):
     return db.query(User).all()
+
+@app.get("/users_html/")
+def read_users_html(request: Request, db: Session = Depends(get_db)):
+    users = db.query(User).all()
+    return templates.TemplateResponse("users.html", {"request": request, "users": users,})
+
+uvicorn.run(app)
